@@ -17,11 +17,11 @@ class Parser:
         self.parsed_dictionary = {}
         self.parsed_address = Address({})
 
-        #components to street name
-        self.check_components = ['StreetNamePostType', 'StreetNamePreType', 'StreetNamePreDirectional', 'StreetNamePostDirectional']
+        #components to be checked frequently
+        self.check_components = ('StreetNamePostType', 'StreetNamePreType', 'StreetNamePreDirectional', 'StreetNamePostDirectional')
         self.street_directions = self.check_components[2:]
 
-        #converting states
+        #state conversion
         self.state_converter = {
             'alabama'       : 'AL', 'alaska'        : 'AK', 'arizona'     : 'AZ', 'arkansas'      : 'AR', 
             'california'    : 'CA', 'georgia'       : 'GA', 'iowa'        : 'IA', 'maryland'      : 'MD', 
@@ -38,10 +38,10 @@ class Parser:
             'newhampshire'  : 'NH', 'pennsylvania'  : 'PA', 'puertorico'  : 'PR'
         }
 
-        #converting directions
+        #direction conversion
         self.direction_names = {
-            True  : ['N', 'E', 'S', 'W', 'NE', 'NW', 'SE', 'SW'],
-            False : ['North', 'East', 'South', 'West', 'Northeast', 'Northwest', 'Southeast', 'Southwest']
+            True  : ['N',       'E',      'S',       'W',      'NE',          'NW',          'SE',          'SW'       ],
+            False : ['North',   'East',   'South',   'West',   'Northeast',   'Northwest',   'Southeast',   'Southwest']
         }
         self.direction_converter = {
             'north.n'      : None,
@@ -53,80 +53,46 @@ class Parser:
             'southeast.se' : None,
             'southwest.sw' : None
         }
-        self.set_direction_type_abbreviated()
+        self.set_direction_type_settings()
 
-        # STREET TYPE CONVERSION
-        self.street_type_converter ={
-            'alley'         : 'alley.aly.allee.ally',
-            'annex'         : 'annex.anx.anex.annx',
-            'arcade'        : 'arcade.arc.arcades.arcs',
-            'avenue'        : 'avenue.ave.av.aven.avenu.avn.avnue',
-            'bluff'         : 'bluff.blf.blfs.bluf.bluffs',
-            'bottom'        : 'bottom.bot.bottm.btm',
-            'boulevard'     : 'boulevard.blvd.boulv.boul',
-            'branch'        : 'branch.br.brnch',
-            'bridge'        : 'bridge.brg.brdge',
-            'bypass'        : 'bypass.byps.byp.bypa.bypas',
-            'causeway'      : 'causeway.cswy.causwa.causewy.csway',
-            'center'        : 'center.cen.cent.centers.centr.centre.cnter.cntr.ctr',
-            'circle'        : 'circle.cir.circ.circl.circles.cirs.crcl.crcle',
-            'cliff'         : 'cliff.clf.clfs.cliffs',
-            'court'         : 'court.ct.courts.crt.cts',
-            'cove'          : 'cove.cv.cve.coves',
-            'crescent'      : 'crescent.cres.crest.crse.crsent.crsnt.crst',
-            'curve'         : 'curve.cv.curv.cvs',
-            'drive'         : 'drive.dr.driv.drives.drs.drv.dv',
-            'estate'        : 'estate.est.estates.ests',
-            'expressway'    : 'expressway.expwy.exp.expr.express.expw.expy',
-            'extension'     : 'extension.ext.extensions.extn.extnsn.exts',
-            'fork'          : 'fork.frk.forks.frks',
-            'freeway'       : 'freeway.fwy.freewy.frway.frwy.fry',
-            'garden'        : 'garden.gdn.gardens.gardn.gdns.grden.grdn.grdns',
-            'gateway'       : 'gateway.gtwy.gatewy.gatway.gtway',
-            'grove'         : 'grove.grv.grov.groves.grvs',
-            'harbor'        : 'harbor.hbr.harb.harbors.harbr.hbrs.hrbor.hrbr',
-            'highway'       : 'highway.hwy.highwy.hiway.hiwy.hway.motorway.motorwy.mtrway.throughway.thruway.thruways.thrwy',
-            'hill'          : 'hill.hl.hills.hls',
-            'hollow'        : 'hollow.hlw.hollows.holw.holws.hllw.holw.holws',
-            'island'        : 'island.islnd.island.islnds.iss',
-            'isle'          : 'isle.is.isles.',
-            'junction'      : 'junction.jctn.jct.jctns.jcts.junctions.junctn.juncton',
-            'key'           : 'key.key.keys.ky.kys',
-            'landing'       : 'landing.land.lndg.lndng',
-            'lane'          : 'lane.ln.lne.lanes.lnes.lns.lans',
-            'loop'          : 'loop.loop.loops',
-            'meadow'        : 'meadow.mdw.mdws.meadows.medows',
-            'mhp'           : 'mhp.mhp',
-            'mill'          : 'mill.ml.mills.mls.mils',
-            'mountain'      : 'mountain.mt.mount.mountains.mountin.mtin.mtn.mtns.mtwy',
-            'park'          : 'park.park.parks.prks.prk',
-            'parkway'       : 'parkway.pkwy.parkways.parkwy.pkway.pkwys.pky',
-            'passage'       : 'passage.pass.passages.psg.psgs.psge',
-            'turnpike'      : 'turnpike.tpke.pike.turnpk.pikes.pke.pkes',
-            'place'         : 'place.pl.pls.places',
-            'plain'         : 'plain.pln.plains.plns',
-            'plz'           : 'plz.plz',
-            'point'         : 'point.pt.pointe.points.pointes.ptes.pts',
-            'port'          : 'port.prt.ports.prts',
-            'radial'        : 'radial.rad.radiel.radl',
-            'ranch'         : 'ranch.rnch.ranches.rnchs',
-            'ridge'         : 'ridge.rdg.rdge.rdgs.ridges.rdges',
-            'road'          : 'road.rd.roads.rds',
-            'route'         : 'route.rte.rue.routes.rtes.rt.rts',
-            'river'         : 'river.riv.rivr.rvr.rivers.rivrs.rvrs',
-            'shore'         : 'shore.shr.shoar.shoars.shore.shrs',
-            'spring'        : 'spring.spg.spgs.spng.spngs.springs.sprng.sprngs',
-            'square'        : 'square.sq.sqr.sqre.sqrs.sqs.squ.squares',
-            'street'        : 'street.st.str.stra.streets.strt.strts',
-            'station'       : 'station.stn.sta.statn',
-            'terrace'       : 'terrace.ter.terr.terace.trc.ters.terraces.terrs',
-            'trail'         : 'trail.trl',
-            'trce'          : 'trce.trce.',
-            'trafficway'    : 'trafficway.trfwy.trfy.trfwys',
-            'tunnel'        : 'tunnel.tnl.tunel.tunl.tunls.tunnel.tunnels.tunnl',
-            'valley'        : 'valley.valley.vly.valleys.vally.vallys.vlys.vlly',
+        #street type conversion
+        self.street_type_converter = {
+            'alley'         : 'alley.aly.allee.ally',               'annex'         : 'annex.anx.anex.annx',
+            'arcade'        : 'arcade.arc.arcades.arcs',            'avenue'        : 'avenue.ave.av.aven.avenu.avn.avnue',
+            'bluff'         : 'bluff.blf.blfs.bluf.bluffs',         'bottom'        : 'bottom.bot.bottm.btm',
+            'boulevard'     : 'boulevard.blvd.boulv.boul',          'branch'        : 'branch.br.brnch',
+            'bridge'        : 'bridge.brg.brdge',                   'bypass'        : 'bypass.byps.byp.bypa.bypas',
+            'causeway'      : 'causeway.cswy.causwa.causewy.csway', 'center'        : 'center.cen.cent.centers.centr.centre.cnter.cntr.ctr',
+            'cliff'         : 'cliff.clf.clfs.cliffs',              'circle'        : 'circle.cir.circ.circl.circles.cirs.crcl.crcle',
+            'court'         : 'court.ct.courts.crt.cts',            'cove'          : 'cove.cv.cve.coves',
+            'curve'         : 'curve.cv.curv.cvs',                  'crescent'      : 'crescent.cres.crest.crse.crsent.crsnt.crst',
+            'drive'         : 'drive.dr.driv.drives.drs.drv.dv',    'estate'        : 'estate.est.estates.ests',
+            'fork'          : 'fork.frk.forks.frks',                'expressway'    : 'expressway.expwy.exp.expr.express.expw.expy',
+            'freeway'       : 'freeway.fwy.freewy.frway.frwy.fry',  'extension'     : 'extension.ext.extensions.extn.extnsn.exts',
+            'gateway'       : 'gateway.gtwy.gatewy.gatway.gtway',   'garden'        : 'garden.gdn.gardens.gardn.gdns.grden.grdn.grdns',
+            'grove'         : 'grove.grv.grov.groves.grvs',         'harbor'        : 'harbor.hbr.harb.harbors.harbr.hbrs.hrbor.hrbr',
+            'hill'          : 'hill.hl.hills.hls',                  'hollow'        : 'hollow.hlw.hollows.holw.holws.hllw.holw.holws',
+            'island'        : 'island.islnd.island.islnds.iss',     'isle'          : 'isle.is.isles.',
+            'key'           : 'key.key.keys.ky.kys',                'junction'      : 'junction.jctn.jct.jctns.jcts.junctions.junctn.juncton',
+            'landing'       : 'landing.land.lndg.lndng',            'lane'          : 'lane.ln.lne.lanes.lnes.lns.lans',
+            'loop'          : 'loop.loop.loops',                    'meadow'        : 'meadow.mdw.mdws.meadows.medows', 
+            'mhp'           : 'mhp.mhp',                            'mill'          : 'mill.ml.mills.mls.mils',
+            'park'          : 'park.park.parks.prks.prk',           'mountain'      : 'mountain.mt.mount.mountains.mountin.mtin.mtn.mtns.mtwy',
+            'place'         : 'place.pl.pls.places',                'parkway'       : 'parkway.pkwy.parkways.parkwy.pkway.pkwys.pky',
+            'plain'         : 'plain.pln.plains.plns',              'turnpike'      : 'turnpike.tpke.pike.turnpk.pikes.pke.pkes',
+            'plz'           : 'plz.plz',                            'passage'       : 'passage.pass.passages.psg.psgs.psge',
+            'port'          : 'port.prt.ports.prts',                'point'         : 'point.pt.pointe.points.pointes.ptes.pts',
+            'radial'        : 'radial.rad.radiel.radl',             'ranch'         : 'ranch.rnch.ranches.rnchs',
+            'ridge'         : 'ridge.rdg.rdge.rdgs.ridges.rdges',   'road'          : 'road.rd.roads.rds',
+            'route'         : 'route.rte.rue.routes.rtes.rt.rts',   'river'         : 'river.riv.rivr.rvr.rivers.rivrs.rvrs',
+            'shore'         : 'shore.shr.shoar.shoars.shore.shrs',  'spring'        : 'spring.spg.spgs.spng.spngs.springs.sprng.sprngs',
+            'station'       : 'station.stn.sta.statn',              'square'        : 'square.sq.sqr.sqre.sqrs.sqs.squ.squares',
+            'trail'         : 'trail.trl',                          'street'        : 'street.st.str.stra.streets.strt.strts',
+            'trce'          : 'trce.trce.',                         'terrace'       : 'terrace.ter.terr.terace.trc.ters.terraces.terrs',
+            'trafficway'    : 'trafficway.trfwy.trfy.trfwys',       'tunnel'        : 'tunnel.tnl.tunel.tunl.tunls.tunnel.tunnels.tunnl',
+            'way'           : 'way.wy.wys.ways',                    'valley'        : 'valley.valley.vly.valleys.vally.vallys.vlys.vlly',
             'village'       : 'village.vill.villag.villages.ville.villg.villiage.vlg',
-            'way'           : 'way.wy.wys.ways'
+            'highway'       : 'highway.hwy.highwy.hiway.hiwy.hway.motorway.motorwy.mtrway.throughway.thruway.thruways.thrwy'
         }
         self.street_type_settings = {
             'alley'         : False, 'annex'        : False, 'arcade'   : False, 'avenue'       : False, 'bluff'        : False, 
@@ -145,123 +111,6 @@ class Parser:
             'trafficway'    : False, 'tunnel'       : False, 'valley'   : False, 'village'      : False, 'way'          : False
         }
         self.street_types = tuple(self.street_type_settings.keys())
-
-    
-    def get_street_type_settings(self, *args):
-        if args:
-            for arg in args:
-                if arg in self.street_types:
-                    yield arg, self.street_type_settings[arg]
-    
-    def set_street_type_abbreviation(self, *args, **kwargs):
-        if kwargs:
-            for key, value in kwargs.items():
-                if key in self.street_types:
-                    if value == True or value == False:
-                        self.street_type_settings[key] = value
-                    else:
-                        raise TypeError('Type should be boolean. ' + "'" + str(value) + "'" + ' not accepted.')
-                else:
-                    raise ValueError('Street type ' + "'" + str(key) + "'" + ' does not exist.')
-    
-    def get_all_street_type_settings(self):
-        for key, value in self.street_type_settings:
-            yield key, value
-
-    def set_all_street_type_settings(self, abbrev=False):
-        for key, _ in self.street_type_settings.items():
-            self.street_type_settings[key] = abbrev
-
-    def standardize_street_component(self, component):
-        if component in self.street_types:
-            if self.street_type_settings[component]:
-                return self.street_type_converter[component].split('.')[1].capitalize()
-            return self.street_type_converter[component].split('.')[0].capitalize()
-        else:
-            return component.capitalize()
-
-    def decide_street_component(self, component):
-        for key, value in self.street_type_converter.items():
-            component_types = value.split('.')
-            for component_type in component_types:
-                if component_type == component.lower():
-                    return key
-        return component
-    
-    def get_type_variations(self, *args):
-        """Returns an iterable of street type variations for given street types."""
-        for arg in args:
-            if arg in self.street_types:
-                yield self.street_type_converter[arg]
-
-    def initiate_valid_address_settings(
-        self, 
-        AddressNumber=True, 
-        StreetNamePreDirectional=False, 
-        StreetNamePreType=False,
-        StreetName=True, 
-        StreetNamePostType=False,
-        StreetNamePostDirectional=False,
-        PlaceName=True,
-        StateName=False,
-        ZipCode=True,
-        ZipCodeExtension=False
-    ):
-        """Set valid address settings. Can be used to change default settings."""
-        self.valid_address_template = {
-            'AddressNumber': AddressNumber,
-            'StreetNamePreDirectional': StreetNamePreDirectional,
-            'StreetNamePreType': StreetNamePreType,
-            'StreetName': StreetName,
-            'StreetNamePostType': StreetNamePostType,
-            'StreetNamePostDirectional': StreetNamePostDirectional,
-            'PlaceName': PlaceName,
-            'StateName': StateName,
-            'ZipCode': ZipCode,
-            'ZipCodeExtension': ZipCodeExtension
-        }
-    
-    def set_valid_address_settings(self, *args, **kwargs):
-        for key, value in kwargs.items():
-            if key in self.valid_address_template.keys():
-                if value in (False, True):
-                    self.valid_address_template[key] = value
-                else:
-                    raise Exception('Unknown setting ' + key + '.')
-
-    def set_direction_type_abbreviated(self, single=False, dual=True):
-        #set single
-        for index, key in enumerate(list(self.direction_converter.keys())[:4]):
-            self.direction_converter[key] = self.direction_names[single][index]
-        #set dual
-        for index, key in enumerate(list(self.direction_converter.keys())[4:]):
-            self.direction_converter[key] = self.direction_names[dual][index+4]
-
-    def standardize_direction(self, direction):
-        for direction_type, standard_direction in self.direction_converter.items():
-            direction_type = direction_type.split('.')
-            for item in direction_type:
-                if item == re.sub('[^a-zA-Z]+', '', direction).lower():
-                    return standard_direction
-        return None
-
-    def dictionary_add(self, key, value):
-        """Add a set of key, value to a dictionary"""
-        if key not in self.parsed_dictionary.keys():
-            self.parsed_dictionary[key] = value
-        else:
-            self.parsed_dictionary[key] += ' ' + value
-
-    def strip_item(self, item):
-        """Remove non digit, non letter characters from string."""
-        return re.sub('[^0-9a-zA-Z]+', '', item)
-
-    def reset_parser(self):
-        """Reset all variables to initial values"""
-        self.valid = False
-        self.parsed_dictionary.clear()
-        self.address = None
-        self.parsed_address.clear_address()
 
     def parse_address(self, address):
         """Parse a single address."""
@@ -295,10 +144,125 @@ class Parser:
         self.reset_parser()
         return result
 
+    ### START address validity settings 
+    def initiate_valid_address_settings(
+        self, AddressNumber       = True, 
+        StreetNamePreDirectional  = False, StreetNamePreType          = False,  StreetName          = True, 
+        StreetNamePostType        = False, StreetNamePostDirectional  = False,  PlaceName           = True, 
+        StateName                 = False, ZipCode                    = True,   ZipCodeExtension    = False
+    ):
+        """Set valid address settings. Can be used to change default settings."""
+        self.valid_address_template = {
+            'AddressNumber'         : AddressNumber,        'StreetNamePreDirectional'  : StreetNamePreDirectional,
+            'StreetNamePreType'     : StreetNamePreType,    'StreetName'                : StreetName,
+            'StreetNamePostType'    : StreetNamePostType,   'StreetNamePostDirectional' : StreetNamePostDirectional,
+            'PlaceName'             : PlaceName,            'StateName'                 : StateName,
+            'ZipCode'               : ZipCode,              'ZipCodeExtension'          : ZipCodeExtension
+        }
+    
+    def set_valid_address_settings(self, *args, **kwargs):
+        for key, value in kwargs.items():
+            if key in self.valid_address_template.keys():
+                if value in (False, True):
+                    self.valid_address_template[key] = value
+                else:
+                    raise Exception("Unknown setting '" + key + '=' + value + "'.")
+    ### END address validity settings
+    
+    ### START street type settings
+    def get_street_type_settings(self, *args):
+        for arg in args:
+            if arg in self.street_types:
+                yield arg, self.street_type_settings[arg]
+    
+    def set_street_type_abbreviation(self, *args, **kwargs):
+        for key, value in kwargs.items():
+            if key in self.street_types:
+                if value == True or value == False:
+                    self.street_type_settings[key] = value
+                else:
+                    raise TypeError('Type should be boolean. ' + "'" + str(value) + "'" + ' not accepted.')
+            else:
+                raise ValueError('Street type ' + "'" + str(key) + "'" + ' does not exist.')
+    
+    def get_all_street_type_settings(self):
+        for key, value in self.street_type_settings:
+            yield key, value
+
+    def set_all_street_type_settings(self, abbrev=False):
+        for key, _ in self.street_type_settings.items():
+            self.street_type_settings[key] = abbrev
+    ### END street type settings
+
+    ### START street direction settings
+    def set_direction_type_settings(self, single=False, dual=True):
+        #set single
+        for index, key in enumerate(list(self.direction_converter.keys())[:4]):
+            self.direction_converter[key] = self.direction_names[single][index]
+        #set dual
+        for index, key in enumerate(list(self.direction_converter.keys())[4:]):
+            self.direction_converter[key] = self.direction_names[dual][index+4]
+    ### END street direction settings
+
+
+
+
+    #TODO maybe merge?
+    def standardize_street_component(self, component):
+        if component in self.street_types:
+            if self.street_type_settings[component]:
+                return self.street_type_converter[component].split('.')[1].capitalize()
+            return self.street_type_converter[component].split('.')[0].capitalize()
+        else:
+            return component.capitalize()
+
+    def decide_street_component(self, component):
+        for key, value in self.street_type_converter.items():
+            component_types = value.split('.')
+            for component_type in component_types:
+                if component_type == component.lower():
+                    return key
+        return component
+    
+
+
+
+    def get_type_variations(self, *args):
+        """Returns an iterable of street type variations for given street types."""
+        for arg in args:
+            if arg in self.street_types:
+                yield self.street_type_converter[arg]
+
+    def standardize_direction(self, direction):
+        for direction_type, standard_direction in self.direction_converter.items():
+            direction_type = direction_type.split('.')
+            for item in direction_type:
+                if item == re.sub('[^a-zA-Z]+', '', direction).lower():
+                    return standard_direction
+        return None
+
+    def dictionary_add(self, key, value):
+        """Add a set of key, value to a dictionary"""
+        if key not in self.parsed_dictionary.keys():
+            self.parsed_dictionary[key] = value
+        else:
+            self.parsed_dictionary[key] += ' ' + value
+
+    def strip_item(self, item):
+        """Remove non digit, non letter characters from string."""
+        return re.sub('[^0-9a-zA-Z]+', '', item)
+
+    def reset_parser(self):
+        """Reset all variables to initial values"""
+        self.valid = False
+        self.parsed_dictionary.clear()
+        self.address = None
+        self.parsed_address.clear_address()
+
+
     def get_numeric_address_number(self, AddressNumber):
-        if not AddressNumber.isnumeric():
-            AddressNumber = word_to_num(AddressNumber)
-        return str(AddressNumber)
+        """Return numeric representation of number if number is initially a word."""
+        return str(word_to_num(AddressNumber)) if not AddressNumber.isnumeric() else AddressNumber
 
     def parse_to_dictionary(self):
         """Parse an address string using usaddress.parse method; populate parsed_dictionary variable."""
@@ -361,14 +325,27 @@ class Parser:
                 self.dictionary_add(key=self.strip_item(item[1]), value=self.strip_item(item[0]))
 
     def decide_undefined_state_instance(self, component):
+        """
+        Description
+        -----------
+        >Adds a component to the parsed_dictionary based on whether it's a state or not.
+
+        Parameters
+        ----------
+        >component -> value of a component, if state-like, then add as a state component, otherwise as undefined
+        """
         stripped_component = re.sub('[^a-zA-Z]+', '', component).lower()
-        if stripped_component in self.state_converter.keys():
+        if stripped_component in self.state_converter.keys(): #TODO: STATE STANDARDIZATION SETTINGS
             self.dictionary_add(key='StateName', value=self.state_converter[stripped_component])
         else:
             self.dictionary_add(key='UndefinedString', value=self.strip_item(component).capitalize())  
 
     def resolve_undefined(self):
-        """For any undefined component, try to assign its value to some component."""
+        """
+        Description
+        -----------
+        >Iterate through existing undefined components, call self.resolve_undefined_instance for each separate component.
+        """
         #iterate through all undefined components of all types
         for undefined_item_type in ['UndefinedNumber', 'UndefinedString']:
             if undefined_item_type in self.parsed_dictionary.keys():
@@ -384,11 +361,12 @@ class Parser:
         """
         Description
         -----------
-        >Assign a single undefined component to an Address component based on type.
+        >Assign a single undefined component to another component based on type.
 
         Parameters
         ----------
         >undefined_type -> type of undefined component
+
         >undefined_component -> the undefined component
         """  
         #if type is number -> use it as street name or address number
