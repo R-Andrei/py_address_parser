@@ -1,4 +1,7 @@
-class Address:
+from AddressContainer import AddressContainer
+from Component import Component
+
+class Address(object):
     """
     Description
     -----------
@@ -10,7 +13,6 @@ class Address:
 
     Components
     ----------
-    
     >AddressNumber -> address number of address (e.g. >751< West Howell Street)
 
     >AdditionalAddressNumber -> additional address number, is not displayed, only recorded
@@ -41,7 +43,7 @@ class Address:
 
     >set_address_component(component, value) -> sets the given address component to the given value
 
-    >delete_address_component(component) -> removes the value for the given address component
+    >clear_address_component(component) -> removes the value for the given address component
 
     >switch_components(first_component, second_component) -> switches the values of the given components
 
@@ -52,35 +54,37 @@ class Address:
     """
     def __init__(self, parsed_address):
 
-        #Initialize the address as empty
-        self.__address = {
-            'AddressNumber': '',
-            'AdditionalAddressNumber': '',
-            'StreetNamePreDirectional': '',
-            'StreetNamePreType': '',
-            'StreetName': '',
-            'StreetNamePostType': '',
-            'StreetNamePostDirectional': '',
-            'PlaceName': '',
-            'StateName': '',
-            'ZipCode': '',
-            'ZipCodeExtension': ''
-        }
+        self.address = AddressContainer(
+            Component(component_name='AddressNumber', component_value=''),
+            Component(component_name='AdditionalAddressNumber', component_value=''),
+            Component(component_name='StreetNamePreDirectional', component_value=''),
+            Component(component_name='StreetNamePreType', component_value=''),
+            Component(component_name='StreetName', component_value=''),
+            Component(component_name='StreetNamePostType', component_value=''),
+            Component(component_name='StreetNamePostDirectional', component_value=''),
+            Component(component_name='PlaceName', component_value=''),
+            Component(component_name='StateName', component_value=''),
+            Component(component_name='ZipCode', component_value=''),
+            Component(component_name='ZipCodeExtension', component_value='')
+        )
         
+        self.keys = tuple(self.address.keys())
+
         #Set values equal to given values from parameter
         self.initialize_address_components(parsed_address)
-
-        self.keys = list(self.__address.keys())
+        #self.initialize_address(components)
     
+    ##### NEW METHODS
     def __eq__(self, other):
-        return tuple(self.get_all_values()) == tuple(other.get_all_values())
+        #TODO write better function
+        return tuple(self.get_existing_values()) == tuple(other.get_existing_values())
     
     def __repr__(self):
         returnstring = ''
-        for index, _ in enumerate(self.__address.keys()):
-            if self.__address[self.keys[index]]:
+        for index, _ in enumerate(self.keys):
+            if self.address[self.keys[index]]:
                 if self.keys[index] != 'AdditionalAddressNumber':
-                    returnstring += self.__address[self.keys[index]]
+                    returnstring += self.address[self.keys[index]]
                     if self.next_component(index) in ['PlaceName', 'StateName']:
                         returnstring += ', '
                     elif self.next_component(index) == 'ZipCodeExtension':
@@ -88,7 +92,7 @@ class Address:
                     else:
                         returnstring += ' '
         return returnstring
-
+        
     def next_component(self, index):
         """
         Description
@@ -103,12 +107,54 @@ class Address:
         ------
         >component name if next occuring component value exists else None
         """
-        for component_index in range(index + 1, len(self.__address)):
-            if self.__address[self.keys[component_index]]:
+        for component_index in range(index + 1, len(self.address)):
+            if self.address[self.keys[component_index]]:
                 return self.keys[component_index]
         return None
+
+    def get_address(self): ##DONE
+        """Returns the main storage variable."""
+        return self.address
+
+    def __getitem__(self, component_name): ##DONE
+        return self.address[component_name]
     
-    def initialize_address_components(self, parsed_address):
+    def get_existing_values(self): #DONE
+        """Returns an iterable of all existing values."""
+        return (value for value in self.address.values() if value)
+
+    def set_address_component_v2(self, component): #DONE
+        if component in self.address:
+            self.address[component.name] = component.value if component.value else ''
+    
+    def __setitem__(self, component_name, component_value): #DONE
+        if component_name in self.keys:
+            self.address[component_name] = component_value if component_value else '' 
+    
+    def clear_address_component_v2(self, component):
+        if component in self.address:
+            self.address[component.name] = ''
+   
+    def switch_components_v2(self, first_component, second_component):
+        self.address[first_component.name], self.address[second_component.name] = self.address[second_component.value], self.address[first_component.value]
+    
+    def clear_address(self): #DONE
+        """Removes all values for all components."""
+        for component_name in self.keys:
+            self.address[component_name] = ''
+    
+    def unpack(self):
+        """Returns the address as a string."""
+        return self.__repr__()
+    
+    def initialize_address(self, *components):
+        for component in components:
+            if component in self.address:
+                self.address[component.name] = component.value if component.value else ''
+    ##### NEW METHODS
+
+
+    def initialize_address_components(self, parsed_address): #TO BE REMOVED
         """
         Description
         -----------
@@ -120,41 +166,15 @@ class Address:
         >parsed_address -> dictionary containing keys and values for address components
         """
         for component, value in parsed_address.items():
-            if component in self.__address.keys():
+            if component in self.keys:
                 if value:
-                    self.__address[component] = value
+                    self.address[component] = value
 
-    def get_address(self):
-        """Returns the main storage variable."""
-        return self.__address
-
-    def get_address_component(self, component):
-        """Returns a component based on input."""
-        return self.__address[component] if component in self.__address.keys() else None
-
-    def set_address_component(self, component, value):
-        """Sets the value for a given component based on input."""
-        if component in self.__address.keys():
-            self.__address[component] = value if value else ''
-    
-    def delete_address_component(self, component):
+    def clear_address_component(self, component):
         """Removes the value for a given component."""
-        if component in self.__address.keys():
-            self.__address[component] = ''
+        if component in self.keys:
+            self.address[component] = ''
              
     def switch_components(self, first_component, second_component):
         """Switches the values of two given components."""
-        self.__address[first_component], self.__address[second_component] = self.__address[second_component], self.__address[first_component]
-
-    def clear_address(self):
-        """Removes all values for all components."""
-        for component in self.__address.keys():
-            self.__address[component] = ''
-    
-    def get_all_values(self):
-        """Returns an iterable of all existing values."""
-        return (value for value in self.__address.values() if value)
-
-    def unpack(self):
-        """Returns the address as a string."""
-        return self.__repr__()
+        self.address[first_component], self.address[second_component] = self.address[second_component], self.address[first_component]
