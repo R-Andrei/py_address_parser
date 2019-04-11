@@ -7,15 +7,22 @@ from word_number_converter import word_to_num
 class Parser:
     def __init__(self, *args, **kwargs):
 
-        #valid address settings
-        self.valid_address_template = {}
-        self.initiate_valid_address_settings()
-        self.valid = False
-
         #address storage
         self.address = None
         self.parsed_dictionary = {}
+        self.address_components = []
         self.parsed_address = Address({})
+
+        #valid address settings
+        self.valid_address_template = {
+            'AddressNumber'         : False,        'StreetNamePreDirectional'  : False,
+            'StreetNamePreType'     : False,        'StreetName'                : False,
+            'StreetNamePostType'    : False,        'StreetNamePostDirectional' : False,
+            'PlaceName'             : False,        'StateName'                 : False,
+            'ZipCode'               : False,        'ZipCodeExtension'          : False
+        }
+        self.set_valid_address_settings()
+        self.valid = False
 
         #components to be checked frequently
         self.check_components = ('StreetNamePostType', 'StreetNamePreType', 'StreetNamePreDirectional', 'StreetNamePostDirectional')
@@ -135,50 +142,47 @@ class Parser:
             raise Exception(str(e))
 
         print(self.address)
-        # print(usa.parse(self.address), '\n')
-        # print(self.parsed_dictionary, '\n')
-        # print(self.parsed_address.get_address(), '\n')
 
         #get result and reset variables
         result = deepcopy(self.send_result())
         self.reset_parser()
         return result
 
-    ### START address validity settings 
-    def initiate_valid_address_settings(
-        self, AddressNumber       = True, 
-        StreetNamePreDirectional  = False, StreetNamePreType          = False,  StreetName          = True, 
-        StreetNamePostType        = False, StreetNamePostDirectional  = False,  PlaceName           = True, 
-        StateName                 = False, ZipCode                    = True,   ZipCodeExtension    = False
-    ):
-        """Set valid address settings. Can be used to change default settings."""
-        self.valid_address_template = {
-            'AddressNumber'         : AddressNumber,        'StreetNamePreDirectional'  : StreetNamePreDirectional,
-            'StreetNamePreType'     : StreetNamePreType,    'StreetName'                : StreetName,
-            'StreetNamePostType'    : StreetNamePostType,   'StreetNamePostDirectional' : StreetNamePostDirectional,
-            'PlaceName'             : PlaceName,            'StateName'                 : StateName,
-            'ZipCode'               : ZipCode,              'ZipCodeExtension'          : ZipCodeExtension
-        }
-    
+
+    #Address validity settings
     def set_valid_address_settings(self, *args, **kwargs):
-        for key, value in kwargs.items():
-            if key in self.valid_address_template.keys():
-                if value in (False, True):
-                    self.valid_address_template[key] = value
+        """
+        Description
+        -----------
+        >Modifies validity settings for address. Has default state.
+
+        Parameters
+        ----------
+        >
+        """
+        invalid_container = []
+        for key, value in kwargs.items(): ###NOT DONE
+            if key in self.parsed_address.keys: ### NOT DONE
+                if type(value) == bool: ###NOTDONE
+                    self.valid_address_template[key] = value ###NOTDONE 
                 else:
-                    raise Exception("Unknown setting '" + key + '=' + value + "'.")
-    ### END address validity settings
-    
-    ### START street type settings
+                    raise TypeError('Value of ' + key + ' is incorrect, must be either True or False, not ' + str(value)) 
+            else:
+                invalid_container.append(key)
+
+        if invalid_container:
+            raise Exception('Invalid settings:', str(invalid_container))
+            
+    #Street type settings
     def get_street_type_settings(self, *args):
         for arg in args:
             if arg in self.street_types:
                 yield arg, self.street_type_settings[arg]
     
-    def set_street_type_abbreviation(self, *args, **kwargs):
+    def set_street_type_settings(self, *args, **kwargs):
         for key, value in kwargs.items():
             if key in self.street_types:
-                if value == True or value == False:
+                if type(value) == bool:
                     self.street_type_settings[key] = value
                 else:
                     raise TypeError('Type should be boolean. ' + "'" + str(value) + "'" + ' not accepted.')
@@ -192,7 +196,6 @@ class Parser:
     def set_all_street_type_settings(self, abbrev=False):
         for key, _ in self.street_type_settings.items():
             self.street_type_settings[key] = abbrev
-    ### END street type settings
 
     ### START street direction settings
     def set_direction_type_settings(self, single=False, dual=True):
@@ -202,29 +205,6 @@ class Parser:
         #set dual
         for index, key in enumerate(list(self.direction_converter.keys())[4:]):
             self.direction_converter[key] = self.direction_names[dual][index+4]
-    ### END street direction settings
-
-
-
-
-    #TODO maybe merge?
-    def standardize_street_component(self, component):
-        if component in self.street_types:
-            if self.street_type_settings[component]:
-                return self.street_type_converter[component].split('.')[1].capitalize()
-            return self.street_type_converter[component].split('.')[0].capitalize()
-        else:
-            return component.capitalize()
-
-    def decide_street_component(self, component):
-        for key, value in self.street_type_converter.items():
-            component_types = value.split('.')
-            for component_type in component_types:
-                if component_type == component.lower():
-                    return key
-        return component
-    
-
 
 
     def get_type_variations(self, *args):
@@ -241,28 +221,65 @@ class Parser:
                     return standard_direction
         return None
 
-    def dictionary_add(self, key, value):
-        """Add a set of key, value to a dictionary"""
-        if key not in self.parsed_dictionary.keys():
-            self.parsed_dictionary[key] = value
-        else:
-            self.parsed_dictionary[key] += ' ' + value
+    def check_existing_street_type(self):
+        """Returns True if any street type exists in the current address, False otherwise."""
+        return True if self.parsed_address['StreetNamePreType'] or self.parsed_address['StreetNamePostType'] else True
 
+    # UTILITY METHODS
     def strip_item(self, item):
         """Remove non digit, non letter characters from string."""
         return re.sub('[^0-9a-zA-Z]+', '', item)
 
-    def reset_parser(self):
-        """Reset all variables to initial values"""
-        self.valid = False
-        self.parsed_dictionary.clear()
-        self.address = None
-        self.parsed_address.clear_address()
-
-
+    
     def get_numeric_address_number(self, AddressNumber):
         """Return numeric representation of number if number is initially a word."""
         return str(word_to_num(AddressNumber)) if not AddressNumber.isnumeric() else AddressNumber
+
+      
+
+    # METHODS THAT SHOULD NOT BE CALLED AT ALL
+    ##########################################################################################################################################
+    def resolve_street_name(self):
+        """
+        Description
+        -----------
+        >Checks for issues in street name, tries to resolve if any exist.
+        """
+
+        function_component = 'StreetName'
+
+        #if street name is missing -> try to get one from other components
+        if not self.parsed_address[function_component]:
+            for component in self.check_components:
+                if self.parsed_address[component]:
+
+                    #avoid using direction components if there is no existing street type component
+                    if component in self.street_directions and not self.check_existing_street_type():
+                        pass
+                    
+                    #if valid component found, switch values and break
+                    else:
+                        self.parsed_address.switch_components(first_component=function_component, second_component=component)
+                        break
+        
+        #if street name is not numeric and there is a pre street type -> remove street name
+        if (
+            not self.strip_item(self.parsed_address[function_component]).isnumeric() 
+            and self.parsed_address['StreetNamePreType']
+        ):
+            self.parsed_address.clear_address_component(component=function_component)
+
+        #if street name is numeric 
+        if self.strip_item(self.parsed_address[function_component]).isnumeric():
+
+            #if there is no pre-street type or pre-street type is like 'road' or 'street' -> remove street name
+            if (
+                not self.check_existing_street_type() 
+                or ( 
+                    self.parsed_address['StreetNamePreType']
+                    and self.strip_item(self.parsed_address['StreetNamePreType']).lower() in '.'.join(self.get_type_variations('road', 'street'))
+                )
+            ): self.parsed_address.clear_address_component(function_component)
 
     def parse_to_dictionary(self):
         """Parse an address string using usaddress.parse method; populate parsed_dictionary variable."""
@@ -338,7 +355,7 @@ class Parser:
         if stripped_component in self.state_converter.keys(): #TODO: STATE STANDARDIZATION SETTINGS
             self.dictionary_add(key='StateName', value=self.state_converter[stripped_component])
         else:
-            self.dictionary_add(key='UndefinedString', value=self.strip_item(component).capitalize())  
+            self.dictionary_add(key='UndefinedString', value=self.strip_item(component).capitalize())
 
     def resolve_undefined(self):
         """
@@ -371,17 +388,18 @@ class Parser:
         """  
         #if type is number -> use it as street name or address number
         if undefined_type == 'UndefinedNumber':
-            if not self.parsed_address.get_address_component('StreetName'):
-                self.parsed_address.set_address_component(component='StreetName', value=undefined_component)
-            elif not self.parsed_address.get_address_component('AddressNumber'):
-                self.parsed_address.set_address_component(component='AddressNumber', value=undefined_component)
+            if not self.parsed_address['StreetName']:
+                self.parsed_address['StreetName'] = undefined_component
+            elif not self.parsed_address['AddressNumber']:
+                self.parsed_address['AddressNumber'] = undefined_component
         
         #if type is string and there is no city, use it as city
         elif undefined_type == 'UndefinedString':
-            if not self.parsed_address.get_address_component('PlaceName'):
-                self.parsed_address.set_address_component(component='PlaceName', value=undefined_component)
+            if not self.parsed_address['PlaceName']:
+                self.parsed_address['PlaceName'] = undefined_component
 
-    #####TEMP METHOD STATE MERGE ###### UGH
+
+    #TODO: create better method
     def state_merge(self, usaddress_list):
         """
         Description
@@ -414,49 +432,25 @@ class Parser:
         
         return tuple(usaddress_list)
 
-    def check_existing_street_type(self):
-        """Returns True if any street type exists in the current address, False otherwise."""
-        return True if self.parsed_address.get_address_component('StreetNamePreType') or self.parsed_address.get_address_component('StreetNamePostType') else True
 
-    def resolve_street_name(self):
-        """Check for issues in street name, try to resolve if any exist."""
+    # PARSE ADDRESS MAIN LOOP
+    def reset_parser(self): #DONE
+        """Reset all variables to initial values"""
+        self.valid = False
+        self.parsed_dictionary.clear()
+        self.address = None
+        self.parsed_address.clear_address()
 
-        function_component = 'StreetName'
-
-        #if street name is missing -> try to get one from other components
-        if not self.parsed_address.get_address_component(function_component):
-            for component in self.check_components:
-                if self.parsed_address.get_address_component(component):
-
-                    #avoid using direction components if there is no existing street type component
-                    if component in self.street_directions and not self.check_existing_street_type():
-                        pass
-                    
-                    #if valid component found, switch values and break
-                    else:
-                        self.parsed_address.switch_components(first_component=function_component, second_component=component)
-                        break
-        
-        #if street name is not numeric and there is a pre street type -> remove street name
-        if not self.strip_item(self.parsed_address.get_address_component(component=function_component)).isnumeric() and self.parsed_address.get_address_component(component='StreetNamePreType'):
-            self.parsed_address.delete_address_component(component=function_component)
-
-        #if street name is numeric 
-        if self.strip_item(self.parsed_address.get_address_component(component=function_component)).isnumeric():
-
-            #if there is no pre-street type or pre-street type is like 'road' or 'street' -> remove street name
-            if (
-                not self.check_existing_street_type() 
-                or ( 
-                    self.parsed_address.get_address_component(component='StreetNamePreType') 
-                    and self.strip_item(self.parsed_address.get_address_component(component='StreetNamePreType')).lower() in '.'.join(self.get_type_variations('road', 'street'))
-                )
-            ): self.parsed_address.delete_address_component(function_component)
+        #V2
+        self.valid = False
+        self.address_components.clear()
+        self.address = None
+        self.parsed_address.clear_address()
 
     def validate_address(self):
         """Check whether current address is valid or not. If valid, set valid variable to True."""
         for setting, value in self.valid_address_template.items():
-            if value and not self.parsed_address.get_address_component(setting):
+            if value and not self.parsed_address[setting]:
                 return #if one component missing return; self.valid remains False. 
         self.valid = True
 
@@ -465,4 +459,30 @@ class Parser:
         if self.valid:
             return self.parsed_address
         raise Exception('Invalidd address.')
+    
+    def dictionary_add(self, key, value):
+        """Add a set of key, value to a dictionary"""
+        if key not in self.parsed_dictionary.keys():
+            self.parsed_dictionary[key] = value
+        else:
+            self.parsed_dictionary[key] += ' ' + value
 
+
+    #Street type standardization
+    def standardize_street_component(self, component):
+        if component in self.street_types:
+            if self.street_type_settings[component]:
+                return self.street_type_converter[component].split('.')[1].capitalize()
+            return self.street_type_converter[component].split('.')[0].capitalize()
+        else:
+            return component.capitalize()
+
+    def decide_street_component(self, component):
+        for key, value in self.street_type_converter.items():
+            component_types = value.split('.')
+            for component_type in component_types:
+                if component_type == component.lower():
+                    return key
+        return component
+
+  
