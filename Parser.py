@@ -1,6 +1,8 @@
 import re
 import usaddress as usa
 from Address import Address
+from Component import Component
+from ComponentContainer import ComponentContainer
 from copy import deepcopy
 from word_number_converter import word_to_num
 
@@ -9,9 +11,9 @@ class Parser:
 
         #address storage
         self.address = None
-        self.parsed_dictionary = {}
-        self.address_components = []
-        self.parsed_address = Address({})
+        # self.parsed_dictionary = {}
+        self.address_components = ComponentContainer()
+        self.parsed_address = Address()
 
         #valid address settings
         self.valid_address_template = {
@@ -121,27 +123,32 @@ class Parser:
 
     def parse_address(self, address):
         """Parse a single address."""
-        try:
-            #reset variables
-            self.reset_parser()
-            self.address = address
+        # try:
+        #reset variables
+        self.reset_parser() #done
+        self.address = address #done
 
-            #populate usaddress parsed dictionary
-            self.parse_to_dictionary()
+        #populate usaddress parsed dictionary
+        self.parse_to_dictionary_v2() #done
 
-            #populate parsed address
-            self.parsed_address.initialize_address_components(self.parsed_dictionary)
+        #populate parsed address
+        self.parsed_address.initialize_address(self.address_components)
 
-            #attempt to resolve remaining discrepancies
-            self.resolve_undefined()
-            self.resolve_street_name()
+        
 
-            #decide address validity
-            self.validate_address()
-        except Exception as e:
-            raise Exception(str(e))
+        #attempt to resolve remaining discrepancies
+        # self.resolve_undefined()
+        # self.resolve_street_name()
+
+        #decide address validity
+        self.valid = self.validate_address()
+        # except Exception as e:
+        #     raise Exception(str(e))
 
         print(self.address)
+        print(self.parsed_address)
+        print(self.parsed_address.get_address())
+        
 
         #get result and reset variables
         result = deepcopy(self.send_result())
@@ -235,7 +242,6 @@ class Parser:
         """Return numeric representation of number if number is initially a word."""
         return str(word_to_num(AddressNumber)) if not AddressNumber.isnumeric() else AddressNumber
 
-      
 
     # METHODS THAT SHOULD NOT BE CALLED AT ALL
     ##########################################################################################################################################
@@ -281,67 +287,66 @@ class Parser:
                 )
             ): self.parsed_address.clear_address_component(function_component)
 
-    def parse_to_dictionary(self):
-        """Parse an address string using usaddress.parse method; populate parsed_dictionary variable."""
+    def parse_to_dictionary_v2(self):
 
         #iterate through each address component
-        usaddress = self.state_merge(usa.parse(self.address))
-        for item in usaddress:
+        usaddress = self.state_merge(usa.parse(self.address)) #done
+        for item in usaddress: #done
+        
             #resolve AddressNumber conflicts
-            if item[1] == 'AddressNumber':  
-                if 'AddressNumber' not in self.parsed_dictionary.keys():
+            if item[1] == 'AddressNumber': #done
+                if not self.address_components.has_component('AddressNumber'):
                     item[0] = re.sub('[^0-9a-zA-Z-]+', '-', item[0])
                     if '-' in item[0] and self.strip_item(item[0]).isnumeric():
-                        split_item = item[0].split('-')
-                        self.dictionary_add(key=self.strip_item(item[1]), value=self.get_numeric_address_number(split_item[0]))
-                        for sub_item in split_item[1:]:
-                            self.dictionary_add(key='AdditionalAddressNumber', value=self.strip_item(sub_item))
+                        component_values = item[0].split('-')
+                        self.append_address_components(Component(component_name=item[1], component_value=self.get_numeric_address_number(component_values[0])))
+                        for sub_component in component_values[1:]:
+                            self.append_address_components(Component(component_name='AdditionalAddressNumber', component_value=self.strip_item(sub_component)))
                     else:
-                        self.dictionary_add(key=self.strip_item(item[1]), value=self.get_numeric_address_number(item[0]))
-                        
+                        self.append_address_components(Component(component_name=item[1], component_value=self.get_numeric_address_number(item[0])))
                 #if more than one AddressNumber, change one to UndefinedNumber
                 else:
-                    self.dictionary_add(key='UndefinedNumber', value=self.strip_item(item[0]))
+                    self.append_address_components(Component(component_name='UndefinedNumber', component_value=self.strip_item(item[0])))
 
             #building numbers
-            elif item[1] == 'SubaddressIdentifier':
-                if 'AddressNumber' not in self.parsed_dictionary.keys():
-                    self.dictionary_add(key='AddressNumber', value=self.strip_item(item[0]))
+            elif item[1] == 'SubaddressIdentifier': #done
+                if not self.address_components.has_component('AddressNumber'):
+                    self.append_address_components(Component(component_name='AddressNumber', component_value=self.get_numeric_address_number(item[0])))
                 else:
-                    self.dictionary_add(key='UndefinedNumber', value=self.strip_item(item[0]))
+                    self.append_address_components(Component(component_name='UndefinedNumber', component_value=self.strip_item(item[0])))
 
-            #standardize predirection and postdirection to set format
-            elif item[1] == 'StreetNamePreDirectional' or item[1] == 'StreetNamePostDirectional':
-                self.dictionary_add(key=item[1], value=self.standardize_direction(item[0]))
+            #standardize predirection and postdirection
+            elif item[1] == 'StreetNamePreDirectional' or item[1] == 'StreetNamePostDirectional': #done
+                self.append_address_components(Component(component_name=item[1], component_value=self.standardize_direction(item[0])))
 
-            #standardize street pre-type and post-type
+            #standardize street types
             elif item[1] == 'StreetNamePreType' or item[1] == 'StreetNamePostType':
                 item[0] = self.standardize_street_component(component=self.decide_street_component(component=self.strip_item(item[0])))
-                self.dictionary_add(key=item[1], value=item[0])
+                self.append_address_components(Component(component_name=item[1], component_value=item[0]))
 
             #standardize state name to abbreviated format
-            elif item[1] == 'StateName' and len(item[0])>2:
+            elif item[1] == 'StateName' and len(item[0])>2: #done
                 if ',' in item[0]:
                     for split_state in item[0].split(','):
-                        self.decide_undefined_state_instance(component=split_state)
+                        self.parse_state_component(component=split_state)
                 else:
-                    self.decide_undefined_state_instance(component=item[0])
+                    self.parse_state_component(component=item[0])
 
             #if zipcode contains extension, create two components
-            elif item[1] == 'ZipCode' and '-' in item[0]:
+            elif item[1] == 'ZipCode' and '-' in item[0]: #done
                 split_item = item[0].split('-')
-                self.dictionary_add(key='ZipCode', value=self.strip_item(split_item[0]))
-                self.dictionary_add(key='ZipCodeExtension', value=self.strip_item(split_item[1]))
+                self.append_address_components(Component(component_name='ZipCode', component_value=self.strip_item(split_item[0])))
+                self.append_address_components(Component(component_name='ZipCodeExtension', component_value=self.strip_item(split_item[1])))
 
-            #if number found other than address number and zip code
+            #if number found other than AddressNumber or ZipCode
             elif (item[1] != 'AddressNumber' and item[1] != 'ZipCode') and item[0].isnumeric():
-                self.dictionary_add(key='UndefinedNumber', value=self.strip_item(item[0]))
+                self.append_address_components(Component(component_name='UndefinedNumber', component_value=self.strip_item(item[0])))
 
             #add to dictionary as standard
             else:
-                self.dictionary_add(key=self.strip_item(item[1]), value=self.strip_item(item[0]))
+                self.append_address_components(Component(component_name=self.strip_item(item[1]), component_value=self.strip_item(item[0])))
 
-    def decide_undefined_state_instance(self, component):
+    def parse_state_component(self, component): #done
         """
         Description
         -----------
@@ -352,51 +357,51 @@ class Parser:
         >component -> value of a component, if state-like, then add as a state component, otherwise as undefined
         """
         stripped_component = re.sub('[^a-zA-Z]+', '', component).lower()
-        if stripped_component in self.state_converter.keys(): #TODO: STATE STANDARDIZATION SETTINGS
-            self.dictionary_add(key='StateName', value=self.state_converter[stripped_component])
+        if stripped_component in self.state_converter.keys():
+            self.append_address_components(Component(component_name='StateName', component_value=self.state_converter[stripped_component]))
         else:
-            self.dictionary_add(key='UndefinedString', value=self.strip_item(component).capitalize())
+            self.append_address_components(Component(component_name='UndefinedString', component_value=self.strip_item(component).capitalize()))
 
-    def resolve_undefined(self):
-        """
-        Description
-        -----------
-        >Iterate through existing undefined components, call self.resolve_undefined_instance for each separate component.
-        """
-        #iterate through all undefined components of all types
-        for undefined_item_type in ['UndefinedNumber', 'UndefinedString']:
-            if undefined_item_type in self.parsed_dictionary.keys():
+    # def resolve_undefined(self):
+    #     """
+    #     Description
+    #     -----------
+    #     >Iterate through existing undefined components, call self.resolve_undefined_instance for each separate component.
+    #     """
+    #     #iterate through all undefined components of all types
+    #     for undefined_item_type in ['UndefinedNumber', 'UndefinedString']:
+    #         if undefined_item_type in self.parsed_dictionary.keys():
 
-                #if multiple undefined components of the same type, split
-                if ' ' in self.parsed_dictionary[undefined_item_type]:
-                    for undefined_split in self.parsed_dictionary[undefined_item_type].split(' '):
-                        self.resolve_undefined_instance(undefined_type=undefined_item_type, undefined_component=undefined_split)
+    #             #if multiple undefined components of the same type, split
+    #             if ' ' in self.parsed_dictionary[undefined_item_type]:
+    #                 for undefined_split in self.parsed_dictionary[undefined_item_type].split(' '):
+    #                     self.resolve_undefined_instance(undefined_type=undefined_item_type, undefined_component=undefined_split)
 
-                else: self.resolve_undefined_instance(undefined_type=undefined_item_type, undefined_component=self.parsed_dictionary[undefined_item_type])
+    #             else: self.resolve_undefined_instance(undefined_type=undefined_item_type, undefined_component=self.parsed_dictionary[undefined_item_type])
 
-    def resolve_undefined_instance(self, undefined_type, undefined_component):
-        """
-        Description
-        -----------
-        >Assign a single undefined component to another component based on type.
+    # def resolve_undefined_instance(self, undefined_type, undefined_component):
+    #     """
+    #     Description
+    #     -----------
+    #     >Assign a single undefined component to another component based on type.
 
-        Parameters
-        ----------
-        >undefined_type -> type of undefined component
+    #     Parameters
+    #     ----------
+    #     >undefined_type -> type of undefined component
 
-        >undefined_component -> the undefined component
-        """  
-        #if type is number -> use it as street name or address number
-        if undefined_type == 'UndefinedNumber':
-            if not self.parsed_address['StreetName']:
-                self.parsed_address['StreetName'] = undefined_component
-            elif not self.parsed_address['AddressNumber']:
-                self.parsed_address['AddressNumber'] = undefined_component
+    #     >undefined_component -> the undefined component
+    #     """  
+    #     #if type is number -> use it as street name or address number
+    #     if undefined_type == 'UndefinedNumber':
+    #         if not self.parsed_address['StreetName']:
+    #             self.parsed_address['StreetName'] = undefined_component
+    #         elif not self.parsed_address['AddressNumber']:
+    #             self.parsed_address['AddressNumber'] = undefined_component
         
-        #if type is string and there is no city, use it as city
-        elif undefined_type == 'UndefinedString':
-            if not self.parsed_address['PlaceName']:
-                self.parsed_address['PlaceName'] = undefined_component
+    #     #if type is string and there is no city, use it as city
+    #     elif undefined_type == 'UndefinedString':
+    #         if not self.parsed_address['PlaceName']:
+    #             self.parsed_address['PlaceName'] = undefined_component
 
 
     #TODO: create better method
@@ -436,23 +441,17 @@ class Parser:
     # PARSE ADDRESS MAIN LOOP
     def reset_parser(self): #DONE
         """Reset all variables to initial values"""
-        self.valid = False
-        self.parsed_dictionary.clear()
-        self.address = None
-        self.parsed_address.clear_address()
-
-        #V2
-        self.valid = False
         self.address_components.clear()
         self.address = None
         self.parsed_address.clear_address()
+        self.valid = self.validate_address()
 
     def validate_address(self):
         """Check whether current address is valid or not. If valid, set valid variable to True."""
         for setting, value in self.valid_address_template.items():
             if value and not self.parsed_address[setting]:
-                return #if one component missing return; self.valid remains False. 
-        self.valid = True
+                return False#if one component missing return; self.valid remains False. 
+        return True
 
     def send_result(self):
         """Return results of parse_address if address is valid. Raises exception if address is not valid."""
@@ -460,13 +459,12 @@ class Parser:
             return self.parsed_address
         raise Exception('Invalidd address.')
     
-    def dictionary_add(self, key, value):
-        """Add a set of key, value to a dictionary"""
-        if key not in self.parsed_dictionary.keys():
-            self.parsed_dictionary[key] = value
-        else:
-            self.parsed_dictionary[key] += ' ' + value
 
+    def append_address_components(self, component):
+        if component not in self.address_components:
+            self.address_components[component.name] = component
+        else:
+            self.address_components[component.name].value += ' ' + component.value
 
     #Street type standardization
     def standardize_street_component(self, component):
@@ -485,4 +483,4 @@ class Parser:
                     return key
         return component
 
-  
+   
