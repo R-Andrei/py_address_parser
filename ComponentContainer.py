@@ -1,6 +1,6 @@
 from Component import Component
 
-class ComponentContainer(dict):
+class ComponentContainer(dict): #TODO make set instead of dict
     def __init__(self, *components):
         for component in components:
             self.__dict__[component.name] = component
@@ -20,14 +20,8 @@ class ComponentContainer(dict):
     def __delitem__(self, component):
         del self.__dict__[component.name]
 
-    def has_component(self, component_name):
-        return component_name in self.__dict__
-
     def clear(self):
         return self.__dict__.clear()
-
-    def copy(self):
-        return self.__dict__.copy()
 
     def update(self, *args, **kwargs):
         return self.__dict__.update(*args, **kwargs)
@@ -40,12 +34,12 @@ class ComponentContainer(dict):
 
     def items(self):
         return self.__dict__.items()
-
-    def pop(self, *args):
-        return self.__dict__.pop(*args)
-
-    def __contains__(self, component):
+    
+    def has_component(self, component):
         return component.name in self.__dict__
+
+    def __contains__(self, component_name):
+        return component_name in self.__dict__
 
     def __iter__(self):
         return iter(self.__dict__)
