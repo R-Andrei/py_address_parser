@@ -1,4 +1,4 @@
-from AddressContainer import AddressContainer
+from ComponentContainer import ComponentContainer
 from Component import Component
 
 class Address(object):
@@ -9,7 +9,7 @@ class Address(object):
 
     Paramaters
     ----------
-    >parsed_address - dictionary containing address components and values
+    >
 
     Components
     ----------
@@ -37,24 +37,12 @@ class Address(object):
 
     Usable methods
     --------------
-    >get_address() -> returns the main storage variable containing all components and their values
-
-    >get_address_component(component) -> returns the value of the given component
-
-    >set_address_component(component, value) -> sets the given address component to the given value
-
-    >clear_address_component(component) -> removes the value for the given address component
-
-    >switch_components(first_component, second_component) -> switches the values of the given components
-
-    >get_all_values() -> returns an iterable of all current existing values
-
-    >unpack() -> returns the address as a string
+    >
     
     """
-    def __init__(self, parsed_address):
+    def __init__(self, *components):
 
-        self.address = AddressContainer(
+        self.address = ComponentContainer(
             Component(component_name='AddressNumber', component_value=''),
             Component(component_name='AdditionalAddressNumber', component_value=''),
             Component(component_name='StreetNamePreDirectional', component_value=''),
@@ -71,8 +59,8 @@ class Address(object):
         self.keys = tuple(self.address.keys())
 
         #Set values equal to given values from parameter
-        self.initialize_address_components(parsed_address)
-        #self.initialize_address(components)
+        if components:
+            self.initialize_address(components)
     
     ##### NEW METHODS
     def __eq__(self, other):
@@ -123,7 +111,7 @@ class Address(object):
         """Returns an iterable of all existing values."""
         return (value for value in self.address.values() if value)
 
-    def set_address_component_v2(self, component): #DONE
+    def set_address_component(self, component): #DONE
         if component in self.address:
             self.address[component.name] = component.value if component.value else ''
     
@@ -148,28 +136,13 @@ class Address(object):
         return self.__repr__()
     
     def initialize_address(self, *components):
-        for component in components:
-            if component in self.address:
-                self.address[component.name] = component.value if component.value else ''
-    ##### NEW METHODS
+        for component_container in components:
+            for component in component_container.values():
+                if component in self.address:
+                    self.address[component.name] = component.value if component.value else ''
+   
 
-
-    def initialize_address_components(self, parsed_address): #TO BE REMOVED
-        """
-        Description
-        -----------
-        >Method used at the initialization of the object instance. Calling this is not recommended,
-        unless reusing the same instance for multiple addresses. 
-
-        Parameters
-        ----------
-        >parsed_address -> dictionary containing keys and values for address components
-        """
-        for component, value in parsed_address.items():
-            if component in self.keys:
-                if value:
-                    self.address[component] = value
-
+    # OLD METHODS
     def clear_address_component(self, component):
         """Removes the value for a given component."""
         if component in self.keys:
@@ -178,3 +151,5 @@ class Address(object):
     def switch_components(self, first_component, second_component):
         """Switches the values of two given components."""
         self.address[first_component], self.address[second_component] = self.address[second_component], self.address[first_component]
+    
+    
