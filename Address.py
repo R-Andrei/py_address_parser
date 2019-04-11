@@ -100,10 +100,6 @@ class Address(object):
                 return self.keys[component_index]
         return None
 
-    def get_address(self): ##DONE
-        """Returns the main storage variable."""
-        return self.address
-
     def __getitem__(self, component_name): ##DONE
         return self.address[component_name]
     
@@ -138,9 +134,8 @@ class Address(object):
     def initialize_address(self, *components):
         for component_container in components:
             for component in component_container.values():
-                if component in self.address:
+                if self.address.has_component(component):
                     self.address[component.name] = component.value if component.value else ''
-   
 
     # OLD METHODS
     def clear_address_component(self, component):
