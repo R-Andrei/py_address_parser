@@ -1,5 +1,3 @@
-
-
 class Component(object):
     def __init__(self, component_name, component_value):
         if self.validate_name(component_name):
@@ -28,4 +26,3 @@ class Component(object):
     
     def validate_name(self, component_name):
         return True if isinstance(component_name, str) else False
-
