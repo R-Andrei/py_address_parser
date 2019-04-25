@@ -12,7 +12,7 @@ class ComponentContainer(dict): #TODO make set instead of dict
         return self.__dict__[key]
 
     def __repr__(self):
-        return repr(self.__dict__)
+        return repr(self.__dict__.values())
 
     def __len__(self):
         return len(self.__dict__)
