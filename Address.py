@@ -100,6 +100,12 @@ class Address(object):
                 return self.keys[component_index]
         return None
 
+    def __contains__(self, component_name):
+        return component_name in self.address
+    
+    def has_component(self, component):
+        return component.name in self.address
+
     def __getitem__(self, component_name): ##DONE
         return self.address[component_name]
     
