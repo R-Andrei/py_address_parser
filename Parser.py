@@ -11,7 +11,6 @@ class Parser:
 
         #address storage
         self.address = None
-        # self.parsed_dictionary = {}
         self.usaddress_components = ComponentContainer()
         self.parsed_address = Address()
 
@@ -23,8 +22,7 @@ class Parser:
             'PlaceName'             : False,        'StateName'                 : False,
             'ZipCode'               : False,        'ZipCodeExtension'          : False
         }
-        self.set_valid_address_settings()
-        self.valid = False
+        self.valid = self.validate_address()
 
         #components to be checked frequently
         self.check_components = ('StreetNamePostType', 'StreetNamePreType', 'StreetNamePreDirectional', 'StreetNamePostDirectional')
@@ -124,17 +122,16 @@ class Parser:
     def parse_address(self, address):
         """Parse a single address."""
         try:
-            #reset variables
-            self.reset_parser() 
+            #store new address
             self.address = address 
 
-            #populate usaddress parsed dictionary
+            #populate usaddress component container
             self.parse_to_component_container() 
 
-            #populate parsed address
+            #create parsed address using parsed components
             self.parsed_address.initialize_address(self.usaddress_components)
 
-            #attempt to resolve remaining discrepancies
+            #attempt to resolve remaining inconsistencies
             self.resolve_undefined()
             self.resolve_street_name()
 
@@ -144,7 +141,6 @@ class Parser:
             raise Exception(str(e))
 
         print(self.address)
-
         print(self.parsed_address.address)
 
         #get result and reset variables
