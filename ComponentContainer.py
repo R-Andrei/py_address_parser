@@ -1,4 +1,4 @@
-from address_parser.Component import Component
+from Component import Component
 
 class ComponentContainer(dict): #TODO make set instead of dict
     def __init__(self, *components):
