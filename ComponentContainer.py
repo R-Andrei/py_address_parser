@@ -1,4 +1,4 @@
-from Component import Component
+from address_parser.Component import Component
 
 class ComponentContainer(dict): #TODO make set instead of dict
     def __init__(self, *components):
@@ -43,3 +43,6 @@ class ComponentContainer(dict): #TODO make set instead of dict
 
     def __iter__(self):
         return iter(self.__dict__)
+
+    def get_all_items(self):
+        return self.__dict__
