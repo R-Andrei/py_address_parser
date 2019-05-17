@@ -7,6 +7,17 @@ from copy import deepcopy
 from word_number_converter import word_to_num
 
 class Parser:
+    """
+    NOT DOCUMENTED YET.
+
+    Usage of Parser class:
+
+    -define parser object like 'parser = Parser()'
+    -optionally define settings, using methods: set_valid_address_settings, set_street_type_settings, set_all_street_type_settings, set_direction_type_settings
+    -call 'parse_address' method, assign result to a variable like 'my_address = parser.parse_address(address)'
+
+    *Parser returns Address type objects.
+    """
     def __init__(self, *args, **kwargs):
 
         #address storage
@@ -121,6 +132,7 @@ class Parser:
 
     def parse_address(self, address):
         """Parse a single address."""
+        self.reset_parser()
         try:
             #store new address
             self.address = address 
@@ -134,20 +146,21 @@ class Parser:
             #attempt to resolve remaining inconsistencies
             self.resolve_undefined()
             self.resolve_street_name()
+            self.resolve_address_number()
 
             #decide address validity
             self.valid = self.validate_address()
         except Exception as e:
+            self.reset_parser()
             raise Exception(str(e))
 
-        print(self.address)
-        print(self.parsed_address.address)
+        # print(self.address)
+        # print(self.parsed_address.address)
 
         #get result and reset variables
         result = deepcopy(self.send_result())
         self.reset_parser()
         return result
-
 
     #Address validity settings
     def set_valid_address_settings(self, *args, **kwargs):
@@ -190,7 +203,7 @@ class Parser:
                 raise ValueError('Street type ' + "'" + str(key) + "'" + ' does not exist.')
     
     def get_all_street_type_settings(self):
-        for key, value in self.street_type_settings:
+        for key, value in self.street_type_settings.items():
             yield key, value
 
     def set_all_street_type_settings(self, abbrev=False):
@@ -205,7 +218,6 @@ class Parser:
         #set dual
         for index, key in enumerate(list(self.direction_converter.keys())[4:]):
             self.direction_converter[key] = self.direction_names[dual][index+4]
-
 
     def get_type_variations(self, *args):
         """Returns an iterable of street type variations for given street types."""
@@ -229,15 +241,12 @@ class Parser:
     def strip_item(self, item):
         """Remove non digit, non letter characters from string."""
         return re.sub('[^0-9a-zA-Z]+', '', item)
-
-    
+   
     def get_numeric_address_number(self, AddressNumber):
         """Return numeric representation of number if number is initially a word."""
         return str(word_to_num(AddressNumber)) if not AddressNumber.isnumeric() else AddressNumber
 
-
     # METHODS THAT SHOULD NOT BE CALLED AT ALL
-    ##########################################################################################################################################
     def resolve_street_name(self):
         """
         Description
@@ -261,34 +270,45 @@ class Parser:
                         self.parsed_address.switch_components(first_component=function_component, second_component=component)
                         break
         
-        #if street name is not numeric and there is a pre street type -> remove street name
-        if (
-            not self.strip_item(self.parsed_address[function_component]).isnumeric() 
-            and self.parsed_address['StreetNamePreType']
-        ):
-            self.parsed_address.clear_address_component(component=function_component)
-
         #if street name is numeric 
-        if self.strip_item(self.parsed_address[function_component]).isnumeric():
+        if self.strip_item(self.parsed_address[function_component].value).isnumeric():
 
             #if there is no pre-street type or pre-street type is like 'road' or 'street' -> remove street name
             if (
                 not self.check_existing_street_type() 
                 or ( 
                     self.parsed_address['StreetNamePreType']
-                    and self.strip_item(self.parsed_address['StreetNamePreType']).lower() in '.'.join(self.get_type_variations('road', 'street'))
+                    and self.strip_item(self.parsed_address['StreetNamePreType'].value).lower() in '.'.join(self.get_type_variations('road', 'street'))
                 )
             ): self.parsed_address.clear_address_component(function_component)
 
+    def resolve_address_number(self):
+        #if state is NY check for composed address number
+        if self.parsed_address['AdditionalAddressNumber'].exists() and self.parsed_address['StateName'].value == 'NY':
+            self.parsed_address['AddressNumber'] = '{AddressNumber}-{AdditionalAddressNumber}'\
+                .format(
+                    AddressNumber=self.parsed_address['AddressNumber'].value,
+                    AdditionalAddressNumber=self.parsed_address['AdditionalAddressNumber'].value
+                        )
+            self.parsed_address.clear_address_component('AdditionalAddressNumber')
+        
+        #if address number does not contain digits remove
+        if re.sub(r'\D', '', self.parsed_address['AddressNumber'].value) < re.sub(r'\d', '', self.parsed_address['AddressNumber'].value):
+            self.parsed_address.clear_address_component('AddressNumber')
+
+    def check_hyphen_name(self, item1, item2):
+        if item1.isnumeric() and (item2.upper() in tuple(self.state_converter.values()) or item2.lower() == 'us'):
+            return '{item2}-{item1}'.format(item1=item1, item2=item2)
+        return None
+
     def parse_to_component_container(self):
-    
+        
         #iterate through each address component
         usaddress = self.state_merge(usa.parse(self.address)) 
         for item in usaddress: 
-        
             #resolve AddressNumber conflicts
-            if item[1] == 'AddressNumber': 
-                if  'AddressNumber' not in self.usaddress_components:
+            if item[1] == 'AddressNumber':  
+                if 'AddressNumber' not in self.usaddress_components:
                     item[0] = re.sub('[^0-9a-zA-Z-]+', '-', item[0])
                     if '-' in item[0] and self.strip_item(item[0]).isnumeric():
                         component_values = item[0].split('-')
@@ -300,7 +320,25 @@ class Parser:
                 #if more than one AddressNumber, change one to UndefinedNumber
                 else:
                     self.append_address_components(Component('UndefinedNumber', self.strip_item(item[0])))
-
+            
+            #street name capitalization and character stripping
+            elif item[1] == 'StreetName':
+                if '-' in item[0]:
+                    split_item = item[0].split('-')
+                    if len(split_item) == 2:
+                        component_item = self.check_hyphen_name(item1=self.strip_item(split_item[0]), item2=self.strip_item(split_item[1]))
+                        component_item = component_item if component_item else self.check_hyphen_name(
+                            item1=self.strip_item(split_item[1]), 
+                            item2=self.strip_item(split_item[0])
+                            )
+                        if component_item:
+                            self.append_address_components(Component(self.strip_item(item[1]), component_item))
+                        else:
+                            self.append_address_components(Component(self.strip_item(item[1]), self.strip_item(item[0]).capitalize()))
+                    else:
+                        self.append_address_components(Component(self.strip_item(item[1]), self.strip_item(split_item[0]).capitalize()))
+                else:
+                    self.append_address_components(Component(self.strip_item(item[1]), self.strip_item(item[0]).capitalize()))
             #building numbers
             elif item[1] == 'SubaddressIdentifier': 
                 if 'AddressNumber' not in self.usaddress_components:
@@ -436,11 +474,12 @@ class Parser:
         self.address = None
         self.parsed_address.clear_address()
         self.valid = self.validate_address()
+        # print(self.usaddress_components, self.parsed_address, self.valid)
 
     def validate_address(self):
         """Check whether current address is valid or not. If valid, set valid variable to True."""
         for setting, value in self.valid_address_template.items():
-            if value and not self.parsed_address[setting]:
+            if value and not self.parsed_address[setting].value:
                 return False#if one component missing return; self.valid remains False. 
         return True
 
