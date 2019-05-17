@@ -3,6 +3,8 @@ from Component import Component
 
 class Address(object):
     """
+    NOT DOCUMENTED YET .
+
     Description
     -----------
     >A Class used to represent an address. Contains multiple components.
@@ -70,12 +72,13 @@ class Address(object):
     def __repr__(self):
         returnstring = ''
         for index, _ in enumerate(self.keys):
-            if self.address[self.keys[index]]:
+            if self.address[self.keys[index]].exists():
                 if self.keys[index] != 'AdditionalAddressNumber':
-                    returnstring += self.address[self.keys[index]]
+                    returnstring += self.address[self.keys[index]].value
                     if self.next_component(index) in ['PlaceName', 'StateName']:
                         returnstring += ', '
-                    elif self.next_component(index) == 'ZipCodeExtension':
+                    elif self.next_component(index) == 'ZipCodeExtension' \
+                    and self.address['ZipCodeExtension'].exists():
                         returnstring += '-'
                     else:
                         returnstring += ' '
@@ -96,7 +99,7 @@ class Address(object):
         >component name if next occuring component value exists else None
         """
         for component_index in range(index + 1, len(self.address)):
-            if self.address[self.keys[component_index]]:
+            if self.address[self.keys[component_index]].value:
                 return self.keys[component_index]
         return None
 
@@ -108,22 +111,30 @@ class Address(object):
 
     def __getitem__(self, component_name): ##DONE
         return self.address[component_name]
+
+    def get_full_zipcode(self):
+        zipcode = self.address['ZipCode']['value']
+        zipcode = '{zipcode}{extension}'.format(
+            zipcode=zipcode if zipcode else '', 
+            extension=self.address['ZipCodeExtension']['value'] if zipcode and self.address['ZipCodeExtension']['value'] else ''
+        )
+        return zipcode if zipcode else None
     
     def get_existing_values(self): #DONE
         """Returns an iterable of all existing values."""
-        return (value for value in self.address.values() if value)
+        return (value.value for value in self.address.values() if value.value)
 
     def set_address_component(self, component): #DONE
         if component in self.address:
-            self.address[component.name] = component.value if component.value else ''
+            self.address[component.name] = component if component.value else Component(component.name, '')
     
     def __setitem__(self, component_name, component_value): #DONE
         if component_name in self.keys:
-            self.address[component_name] = component_value if component_value else '' 
+            self.address[component_name] = Component(component_name, component_value) if component_value else Component(component_name, '')
     
     def clear_address_component_v2(self, component):
         if component in self.address:
-            self.address[component.name] = ''
+            self.address[component.name] = Component(component.name, '')
    
     def switch_components_v2(self, first_component, second_component):
         self.address[first_component.name], self.address[second_component.name] = self.address[second_component.value], self.address[first_component.value]
@@ -131,7 +142,7 @@ class Address(object):
     def clear_address(self): #DONE
         """Removes all values for all components."""
         for component_name in self.keys:
-            self.address[component_name] = ''
+            self.address[component_name] = Component(component_name, '')
     
     def unpack(self):
         """Returns the address as a string."""
@@ -141,13 +152,16 @@ class Address(object):
         for component_container in components:
             for component in component_container.values():
                 if self.address.has_component(component):
-                    self.address[component.name] = component.value if component.value else ''
+                    self.address[component.name] = component if component.value else Component(component.name, '')
+    
+    def get_all_components(self):
+        return (component for component in self.address.values())
 
     # OLD METHODS
-    def clear_address_component(self, component):
+    def clear_address_component(self, component_name):
         """Removes the value for a given component."""
-        if component in self.keys:
-            self.address[component] = ''
+        if component_name in self.keys:
+            self.address[component_name] = Component(component_name, '')
              
     def switch_components(self, first_component, second_component):
         """Switches the values of two given components."""
