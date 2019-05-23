@@ -4,7 +4,7 @@ from Address import Address
 from Component import Component
 from ComponentContainer import ComponentContainer
 from copy import deepcopy
-from word_number_converter import word_to_num
+from converter import to_digits
 
 class Parser:
     """
@@ -244,7 +244,7 @@ class Parser:
    
     def get_numeric_address_number(self, AddressNumber):
         """Return numeric representation of number if number is initially a word."""
-        return str(word_to_num(AddressNumber)) if not AddressNumber.isnumeric() else AddressNumber
+        return str(to_digits(AddressNumber)) if not AddressNumber.isnumeric() else AddressNumber
 
     # METHODS THAT SHOULD NOT BE CALLED AT ALL
     def resolve_street_name(self):
