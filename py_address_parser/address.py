@@ -3,8 +3,6 @@ from .component import Component
 
 class Address(object):
     """
-    NOT DOCUMENTED YET .
-
     Description
     -----------
     >A Class used to represent an address. Contains multiple components.
@@ -58,7 +56,7 @@ class Address(object):
             Component(component_name='ZipCodeExtension', component_value='')
         )
         
-        self.keys = tuple(self.address.keys())
+        self.__keys = tuple(self.address.keys())
 
         #Set values equal to given values from parameter
         if components:
@@ -71,10 +69,10 @@ class Address(object):
     
     def __repr__(self):
         returnstring = '<Address object>: '
-        for index, _ in enumerate(self.keys):
-            if self.address[self.keys[index]].exists():
-                if self.keys[index] != 'AdditionalAddressNumber':
-                    returnstring += self.address[self.keys[index]].value
+        for index, _ in enumerate(self.__keys):
+            if self.address[self.__keys[index]].exists():
+                if self.__keys[index] != 'AdditionalAddressNumber':
+                    returnstring += self.address[self.__keys[index]].value
                     if self.next_component(index) in ['PlaceName', 'StateName']:
                         returnstring += ', '
                     elif self.next_component(index) == 'ZipCodeExtension' \
@@ -99,8 +97,8 @@ class Address(object):
         >component name if next occuring component value exists else None
         """
         for component_index in range(index + 1, len(self.address)):
-            if self.address[self.keys[component_index]].value:
-                return self.keys[component_index]
+            if self.address[self.__keys[component_index]].value:
+                return self.__keys[component_index]
         return None
 
     def __contains__(self, component_name):
@@ -124,12 +122,15 @@ class Address(object):
         """Returns an iterable of all existing values."""
         return (value.value for value in self.address.values() if value.value)
 
+    def get_existing_keys(self):
+        return (key for key in self.address.keys() if self.address[key].value)
+
     def set_address_component(self, component): #DONE
         if component in self.address:
             self.address[component.name] = component if component.value else Component(component.name, '')
     
     def __setitem__(self, component_name, component_value): #DONE
-        if component_name in self.keys:
+        if component_name in self.__keys:
             self.address[component_name] = Component(component_name, component_value) if component_value else Component(component_name, '')
     
     def clear_address_component_v2(self, component):
@@ -141,7 +142,7 @@ class Address(object):
     
     def clear_address(self): #DONE
         """Removes all values for all components."""
-        for component_name in self.keys:
+        for component_name in self.__keys:
             self.address[component_name] = Component(component_name, '')
     
     def as_string(self):
@@ -164,11 +165,21 @@ class Address(object):
     # OLD METHODS
     def clear_address_component(self, component_name):
         """Removes the value for a given component."""
-        if component_name in self.keys:
+        if component_name in self.__keys:
             self.address[component_name] = Component(component_name, '')
              
     def switch_components(self, first_component, second_component):
         """Switches the values of two given components."""
         self.address[first_component], self.address[second_component] = self.address[second_component], self.address[first_component]
     
-    
+    def keys(self):
+        return tuple(self.get_existing_keys())
+
+    def values(self):
+        return tuple(self.get_existing_values())
+
+    def items(self):
+        return ((key, self.address[key].value) for key in self.__keys if self.address[key].value)
+
+    def components(self):
+        return tuple(component for component in self.address.values() if component.value)
