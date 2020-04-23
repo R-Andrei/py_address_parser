@@ -9,5 +9,8 @@ setup(
     author_email='faragau.rares@gmail.com',
     license='MIT',
     packages=['py_address_parser'],
+    install_requires=[
+          'usaddress',
+      ],
     zip_safe=False
 )
