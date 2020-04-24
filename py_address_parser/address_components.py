@@ -1,0 +1,1 @@
+address_components = ["AddressNumber", "AdditionalAddressNumber", "StreetNamePreDirectional", "StreetNamePreType", "StreetName", "StreetNamePostType", "StreetNamePostDirectional", "PlaceName", "StateName", "ZipCode", "ZipCodeExtension"]
